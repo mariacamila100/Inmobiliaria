@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Building2, Users, Home, Settings,
-  Bell, ShieldCheck, CheckCircle, Menu, FileText, 
-  Clock, Droplets
+  Bell, ShieldCheck, CheckCircle, Menu, FileText,
+  Clock, Droplets, X, LogOut
 } from 'lucide-react';
 
 import EdificiosPage from '../pages/EdificiosPage';
@@ -10,109 +10,205 @@ import UsuariosPage from '../pages/UsuariosPage';
 import InmueblePage from '../pages/InmueblePage';
 import DocumentsPage from '../pages/DocumentosPage';
 import ConsumosPage from '../pages/consumosPage.jsx';
-import MuroComunidad from '../components/MuroComunidad'; // Importamos el nuevo componente
+import MuroComunidad from '../components/MuroComunidad';
+
 import { getUsuarios } from '../services/usuarios.service';
 import { getEdificios } from '../services/edificios.services';
+
+import { auth } from '../api/firebaseConfig';
+import { signOut } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardAdmin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [edificios, setEdificios] = useState([]);
-  const [stats, setStats] = useState({ totalEdificios: 0, totalUsuarios: 0, activos: 0, inactivos: 0 });
+  const navigate = useNavigate();
+
+  const [stats, setStats] = useState({
+    totalEdificios: 0,
+    totalUsuarios: 0,
+    activos: 0,
+    pendientes: 0
+  });
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [usersData, buildingsData] = await Promise.all([getUsuarios(), getEdificios()]);
+        const [usersData, buildingsData] = await Promise.all([
+          getUsuarios(),
+          getEdificios()
+        ]);
+
         setEdificios(buildingsData);
+
         setStats({
           totalEdificios: buildingsData.length,
           totalUsuarios: usersData.length,
-          activos: usersData.filter(u => u.estado).length,
-          inactivos: usersData.filter(u => !u.estado).length
+          activos: usersData.filter(u => u.estado === true).length,
+          pendientes: 1
         });
-      } catch (error) { console.error(error); }
+
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+      }
     };
+
     loadData();
   }, []);
 
+  const navigateTo = (tab) => {
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate('/');
+  };
+
   return (
-    <div className="flex h-screen bg-[#FDFDFF] overflow-hidden font-sans text-slate-900">
-      {/* SIDEBAR */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 transform transition-transform duration-300 lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-900/40"><ShieldCheck className="text-white" size={20} /></div>
-          <span className="text-white font-bold text-xl tracking-tight">Edificios<span className="text-blue-500">Col</span></span>
+    <div className="flex h-screen bg-slate-100 overflow-hidden font-sans">
+
+      {/* OVERLAY MOBILE */}
+      <div
+        className={`fixed inset-0 bg-black/40 z-40 lg:hidden transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
+      {/* SIDEBAR — SE MANTIENE OSCURO */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300
+        transform transition-transform duration-300
+        lg:relative lg:translate-x-0 flex flex-col
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* LOGO */}
+        <div className="p-6 flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-600 rounded-md">
+              <ShieldCheck className="text-white" size={18} />
+            </div>
+            <span className="text-white font-semibold text-lg">
+              Edificios<span className="text-blue-500">Col</span>
+            </span>
+          </div>
+
+          <button className="lg:hidden text-slate-400" onClick={() => setIsSidebarOpen(false)}>
+            <X size={22} />
+          </button>
         </div>
-        <nav className="px-4 space-y-2 mt-8">
-          <NavItem icon={<LayoutDashboard size={18} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-          <NavItem icon={<Building2 size={18} />} label="Copropiedades" active={activeTab === 'edificios'} onClick={() => setActiveTab('edificios')} />
-          <NavItem icon={<Users size={18} />} label="Usuarios" active={activeTab === 'usuarios'} onClick={() => setActiveTab('usuarios')} />
-          <NavItem icon={<Home size={18} />} label="Inmuebles" active={activeTab === 'inmuebles'} onClick={() => setActiveTab('inmuebles')} />
-          <NavItem icon={<Droplets size={18} />} label="Consumos" active={activeTab === 'consumos'} onClick={() => setActiveTab('consumos')} />
-          <NavItem icon={<FileText size={18} />} label="Documentos" active={activeTab === 'documentos'} onClick={() => setActiveTab('documentos')} />
-          <div className="pt-8 mt-8 border-t border-slate-800/50"><NavItem icon={<Settings size={18} />} label="Configuración" /></div>
+
+        {/* NAV */}
+        <nav className="flex-1 px-3 py-6 space-y-1">
+          <NavItem icon={<LayoutDashboard size={18} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => navigateTo('dashboard')} />
+          <NavItem icon={<Building2 size={18} />} label="Copropiedades" active={activeTab === 'edificios'} onClick={() => navigateTo('edificios')} />
+          <NavItem icon={<Users size={18} />} label="Usuarios" active={activeTab === 'usuarios'} onClick={() => navigateTo('usuarios')} />
+          <NavItem icon={<Home size={18} />} label="Inmuebles" active={activeTab === 'inmuebles'} onClick={() => navigateTo('inmuebles')} />
+          <NavItem icon={<Droplets size={18} />} label="Consumos" active={activeTab === 'consumos'} onClick={() => navigateTo('consumos')} />
+          <NavItem icon={<FileText size={18} />} label="Documentos" active={activeTab === 'documentos'} onClick={() => navigateTo('documentos')} />
+
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <NavItem icon={<Settings size={18} />} label="Configuración" active={activeTab === 'config'} onClick={() => navigateTo('config')} />
+          </div>
         </nav>
+
+        {/* LOGOUT */}
+        <div className="p-4 border-t border-slate-800">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-sm text-slate-400 hover:text-orange-400 transition"
+          >
+            <LogOut size={18} />
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
 
+      {/* MAIN */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* HEADER */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-8 sticky top-0 z-40">
-          <button className="lg:hidden p-2 bg-slate-50 rounded-lg text-slate-600" onClick={() => setIsSidebarOpen(true)}><Menu size={20} /></button>
-          <div className="ml-auto flex items-center gap-6">
-            <Bell className="text-slate-400" size={20}/>
-            <div className="flex items-center gap-3 border-l border-slate-100 pl-6">
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Administrator</p>
-                <p className="text-sm font-bold text-slate-700">Panel Central</p>
-              </div>
-              <div className="h-10 w-10 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-bold text-xs">AD</div>
+
+        {/* HEADER — MÁS DELGADO */}
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
+          <button
+            className="lg:hidden p-2 rounded-md border border-slate-200 text-slate-600"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu size={20} />
+          </button>
+
+          <div className="flex items-center gap-4 ml-auto">
+            <Bell size={18} className="text-slate-400" />
+            <div className="h-9 w-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+              AD
             </div>
           </div>
         </header>
 
-        {/* CONTENT */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10">
-          {activeTab === 'dashboard' && (
-            <div className="max-w-6xl mx-auto space-y-10 animate-fadeIn">
-              {/* STATS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard icon={<Building2 size={18} />} label="Edificios" value={stats.totalEdificios} color="text-blue-600" bg="bg-blue-50" />
-                <StatCard icon={<Users size={18} />} label="Residentes" value={stats.totalUsuarios} color="text-indigo-600" bg="bg-indigo-50" />
-                <StatCard icon={<CheckCircle size={18} />} label="Activos" value={stats.activos} color="text-emerald-600" bg="bg-emerald-50" />
-                <StatCard icon={<Clock size={18} />} label="Pendientes" value="--" color="text-orange-600" bg="bg-orange-50" />
+        {/* CONTENT — MÁS LIVIANO */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+          <div className="max-w-7xl mx-auto">
+
+            {activeTab === 'dashboard' && (
+              <div className="space-y-8">
+
+                {/* STATS — MINIMAL */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  <StatCard icon={<Building2 size={18} />} label="Edificios" value={stats.totalEdificios} />
+                  <StatCard icon={<Users size={18} />} label="Residentes" value={stats.totalUsuarios} />
+                  <StatCard icon={<CheckCircle size={18} />} label="Activos" value={stats.activos} />
+                  <StatCard icon={<Clock size={18} />} label="Pendientes" value={stats.pendientes} />
+                </div>
+
+                {/* MURO — SIN TARJETA GIGANTE */}
+                <div className="bg-white border border-slate-200 rounded-lg p-6">
+                  <MuroComunidad edificios={edificios} />
+                </div>
+
               </div>
+            )}
 
-              {/* EL MURO AHORA ES UN COMPONENTE SEPARADO */}
-              <MuroComunidad edificios={edificios} />
-            </div>
-          )}
+            {activeTab === 'edificios' && <EdificiosPage />}
+            {activeTab === 'usuarios' && <UsuariosPage />}
+            {activeTab === 'inmuebles' && <InmueblePage />}
+            {activeTab === 'documentos' && <DocumentsPage user={{ role: 'admin', buildingId: 'default' }} />}
+            {activeTab === 'consumos' && <ConsumosPage edificios={edificios} />}
 
-          {activeTab === 'edificios' && <EdificiosPage />}
-          {activeTab === 'usuarios' && <UsuariosPage />}
-          {activeTab === 'inmuebles' && <InmueblePage />}
-          {activeTab === 'documentos' && <DocumentsPage user={{ role: 'admin', buildingId: 'default' }} />}
-          {activeTab === 'consumos' && <ConsumosPage edificios={edificios} />}
+          </div>
         </div>
       </main>
     </div>
   );
 };
 
+/* NAV ITEM — OSCURO PERO SUAVE */
 const NavItem = ({ icon, label, active, onClick }) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-[1.25rem] text-sm font-bold transition-all ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/40 translate-x-1' : 'text-slate-500 hover:text-white hover:bg-slate-800/50'}`}>
-    {icon} <span>{label}</span>
+  <button
+    onClick={onClick}
+    className={`
+      w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition
+      ${active
+        ? 'bg-blue-600 text-white'
+        : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+    `}
+  >
+    {icon} {label}
   </button>
 );
 
-const StatCard = ({ icon, label, value, color, bg }) => (
-  <div className="bg-white p-7 rounded-[2.5rem] border border-slate-50 shadow-sm">
-    <div className="flex items-center gap-5">
-      <div className={`p-4 ${bg} ${color} rounded-2xl shadow-inner`}>{icon}</div>
-      <div>
-        <p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">{label}</p>
-        <p className="text-3xl font-black text-slate-800 leading-none">{value}</p>
-      </div>
+/* STAT — MÁS LIGERO */
+const StatCard = ({ icon, label, value }) => (
+  <div className="bg-white border border-slate-200 rounded-lg p-5 flex items-center gap-4">
+    <div className="p-2.5 bg-slate-100 rounded-md text-slate-700">
+      {icon}
+    </div>
+    <div>
+      <p className="text-[11px] uppercase text-slate-400 font-semibold tracking-wide">
+        {label}
+      </p>
+      <p className="text-xl font-bold text-slate-900">
+        {value}
+      </p>
     </div>
   </div>
 );

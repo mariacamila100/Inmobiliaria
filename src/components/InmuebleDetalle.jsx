@@ -1,9 +1,8 @@
-
 import React, { useEffect } from 'react';
 import { X, Phone, Bed, Bath, Maximize, MapPin, Car, Hash, Info } from 'lucide-react';
 
 const InmuebleDetalle = ({ inmueble, onClose }) => {
-  // BLOQUEO DE SCROLL: Evita que el footer suba al mover el scroll de la página principal
+  // BLOQUEO DE SCROLL
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -14,7 +13,6 @@ const InmuebleDetalle = ({ inmueble, onClose }) => {
   if (!inmueble) return null;
 
   const imagenMostrar = inmueble.foto || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1000';
-  const direccionCompleta = `${inmueble.direccionEdificio}, ${inmueble.ciudadEdificio}`;
 
   const contactarWhatsApp = () => {
     const mensaje = `Hola, estoy interesado en el inmueble: ${inmueble.titulo}. Ubicado en: ${inmueble.nombreEdificio}.`;
@@ -41,35 +39,14 @@ const InmuebleDetalle = ({ inmueble, onClose }) => {
           <X size={20} />
         </button>
 
-        {/* COLUMNA IZQUIERDA: Imagen + Mapa */}
+        {/* COLUMNA IZQUIERDA: Solo Imagen ahora */}
         <div className="w-full md:w-[45%] flex flex-col bg-slate-100 border-r border-slate-100">
-          {/* Imagen */}
-          <div className="h-48 md:h-1/2 relative overflow-hidden">
+          <div className="h-64 md:h-full relative overflow-hidden">
             <img src={imagenMostrar} className="w-full h-full object-cover" alt={inmueble.titulo} />
-            <div className="absolute bottom-4 left-4">
-              <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+            <div className="absolute bottom-6 left-6">
+              <span className="bg-orange-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
                 En {inmueble.tipo}
               </span>
-            </div>
-          </div>
-          
-          {/* Mapa y Dirección Detallada (Lo que faltaba) */}
-          <div className="hidden md:block md:h-1/2 relative">
-            <iframe
-              width="100%"
-              height="100%"
-              frameBorder="0"
-              src={`https://maps.google.com/maps?q=${encodeURIComponent(direccionCompleta)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-              className="grayscale-[0.2] contrast-[1.1]"
-            ></iframe>
-            {/* Cuadro de dirección flotante sobre el mapa */}
-            <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur p-3 rounded-xl shadow-lg border border-slate-100">
-              <p className="text-[11px] font-black text-slate-800 flex items-center gap-2">
-                <MapPin size={14} className="text-orange-500" /> {inmueble.direccionEdificio}
-              </p>
-              <p className="text-[10px] text-slate-500 ml-5 font-bold uppercase tracking-tighter">
-                {inmueble.barrio || 'Sector Residencial'}, {inmueble.ciudadEdificio}
-              </p>
             </div>
           </div>
         </div>
@@ -95,7 +72,7 @@ const InmuebleDetalle = ({ inmueble, onClose }) => {
               </p>
             </div>
 
-            {/* Grid de Atributos Compacto */}
+            {/* Grid de Atributos */}
             <div className="grid grid-cols-4 gap-2 mb-8">
               {[
                 { icon: <Bed size={18}/>, label: 'Hab', val: inmueble.habitaciones },

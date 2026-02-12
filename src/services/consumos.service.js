@@ -3,6 +3,7 @@ import {
   collection, addDoc, query, where, getDocs, orderBy, Timestamp, doc, deleteDoc, updateDoc 
 } from 'firebase/firestore';
 
+// REGISTRAR (Asegúrate de que tenga el 'export')
 export const registrarConsumo = async (data) => {
   try {
     const docRef = await addDoc(collection(db, 'consumos'), {
@@ -13,38 +14,45 @@ export const registrarConsumo = async (data) => {
     });
     return docRef.id;
   } catch (error) {
-    console.error("Error al registrar consumo:", error);
+    console.error("Error al registrar:", error);
     throw error;
   }
 };
 
+// OBTENER TODOS
 export const getConsumos = async (edificioId = null) => {
   try {
-    let consumosRef = collection(db, 'consumos');
-    let q = query(consumosRef, orderBy('fechaRegistro', 'desc'));
-
+    let q = query(collection(db, 'consumos'), orderBy('fechaRegistro', 'desc'));
     if (edificioId && edificioId !== 'all') {
-      q = query(consumosRef, where('edificioId', '==', edificioId), orderBy('fechaRegistro', 'desc'));
+      q = query(collection(db, 'consumos'), where('edificioId', '==', edificioId), orderBy('fechaRegistro', 'desc'));
     }
-
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error("Error al obtener consumos:", error);
-    return [];
-  }
+  } catch (error) { return []; }
 };
 
+// OBTENER ESPECÍFICOS (La que usamos para Andrey)
+export const getConsumosResidente = async (edificioId, unidad) => {
+  try {
+    const qSimple = query(
+      collection(db, 'consumos'),
+      where('edificioId', '==', String(edificioId)),
+      where('unidad', '==', String(unidad))
+    );
+    const snapshot = await getDocs(qSimple);
+    const resultados = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return resultados.sort((a, b) => (b.fechaRegistro?.seconds || 0) - (a.fechaRegistro?.seconds || 0));
+  } catch (error) { return []; }
+};
+
+// ELIMINAR
 export const eliminarConsumo = async (id) => {
   try {
     await deleteDoc(doc(db, 'consumos', id));
-  } catch (error) {
-    console.error("Error al eliminar:", error);
-    throw error;
-  }
+  } catch (error) { throw error; }
 };
 
-// --- FUNCIÓN AGREGADA ---
+// ESTA ES LA QUE FALTA O TIENE ERROR DE NOMBRE
 export const actualizarConsumo = async (id, data) => {
   try {
     const consumoRef = doc(db, 'consumos', id);
@@ -52,10 +60,10 @@ export const actualizarConsumo = async (id, data) => {
       ...data,
       valor: parseFloat(data.valor),
       lectura: parseFloat(data.lectura),
-      ultimaModificacion: Timestamp.now() // Opcional: para saber cuándo se editó
+      ultimaModificacion: Timestamp.now()
     });
   } catch (error) {
-    console.error("Error al actualizar consumo:", error);
+    console.error("Error al actualizar:", error);
     throw error;
   }
 };
