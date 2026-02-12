@@ -19,10 +19,10 @@ const ForgotPassword = () => {
 
     try {
       const q = query(
-        collection(db, 'usuarios'), 
+        collection(db, 'usuarios'),
         where('email', '==', email.trim().toLowerCase())
       );
-      
+
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -33,7 +33,7 @@ const ForgotPassword = () => {
 
       await sendPasswordResetEmail(auth, email.trim());
       setSubmitted(true);
-      
+
       setTimeout(() => {
         navigate('/login');
       }, 4000);
@@ -46,7 +46,7 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen flex bg-white font-sans overflow-x-hidden">
-      
+
       {/* SECCIÓN IZQUIERDA: IDÉNTICA AL LOGIN */}
       <div className="hidden lg:flex lg:w-[40%] xl:w-[35%] bg-slate-900 relative">
         <div className="absolute inset-0">
@@ -69,7 +69,7 @@ const ForgotPassword = () => {
       {/* SECCIÓN DERECHA: FORMULARIO */}
       <div className="w-full lg:w-[60%] xl:w-[65%] flex items-center justify-center p-6 sm:p-12 lg:p-20">
         <div className="w-full max-w-[420px] flex flex-col min-h-[550px]">
-          
+
           <Link to="/login" className="flex items-center gap-2 text-slate-400 hover:text-blue-600 font-black text-[10px] uppercase tracking-[0.2em] mb-12 transition-colors w-fit group">
             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Volver al acceso
           </Link>
@@ -108,7 +108,6 @@ const ForgotPassword = () => {
                   </div>
                 </div>
 
-                {/* BOTÓN CENTRADO Y COMPACTO */}
                 <div className="flex justify-center pt-4">
                   <button
                     type="submit"
@@ -148,7 +147,7 @@ const ForgotPassword = () => {
           </footer>
         </div>
       </div>
-      
+
       <style>{`
         @keyframes progress {
           0% { width: 0%; }

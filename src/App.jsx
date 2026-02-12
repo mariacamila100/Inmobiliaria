@@ -14,7 +14,7 @@ const DashboardWrapper = () => {
   return <DashboardResidente user={user} />;
 };
 
-// Wrapper para inyectar el usuario al Dashboard de Admin (opcional si lo necesitas)
+// Wrapper para inyectar el usuario al Dashboard de Admin
 const AdminWrapper = () => {
   const { user } = useAuth();
   return <DashboardAdmin user={user} />;
@@ -37,8 +37,9 @@ const RootHandler = () => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
-if (user) {
-    // Verificamos que 'rol' exista
+
+  if (user) {
+    // Verificamos que 'rol' exista (campo exacto en Firestore)
     console.log("Rol del usuario detectado:", user.rol); 
     const destino = user.rol === 'admin' ? '/admin' : '/panel';
     return <Navigate to={destino} replace />;
