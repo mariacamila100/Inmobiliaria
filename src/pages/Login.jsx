@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useNavigate, Link } from 'react-router-dom';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '../api/firebaseConfig';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { ArrowRight, Loader2, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
@@ -11,13 +11,12 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [acceptedTerms, setAcceptedTerms] = useState(false); // Nuevo: Estado para términos
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
-    // Validación de seguridad para datos
+
     if (!acceptedTerms) {
       setError('Debes aceptar el tratamiento de datos para continuar.');
       return;
@@ -29,6 +28,7 @@ const Login = () => {
     try {
       let emailParaAuth = identifier.trim();
 
+      // 1. LÓGICA DE IDENTIFICACIÓN (RESIDENTE POR UNIDAD O ADMIN POR EMAIL)
       if (!identifier.includes('@')) {
         const q = query(
           collection(db, 'usuarios'),
@@ -36,23 +36,52 @@ const Login = () => {
           where('rol', '==', 'residente')
         );
         const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) throw new Error();
+        
+        if (querySnapshot.empty) {
+          throw new Error('La unidad no existe o no tiene perfil asignado.');
+        }
+
         const userData = querySnapshot.docs[0].data();
+        // Reconstrucción del correo según tu lógica de creación
         emailParaAuth = `${userData.unidad}${userData.nombreApellido
           .toLowerCase()
           .replace(/\s/g, '')}@${userData.edificioId}.com`;
       }
 
+      // 2. AUTENTICACIÓN CON FIREBASE AUTH
       const userCredential = await signInWithEmailAndPassword(auth, emailParaAuth, password);
-      const userDoc = await getDoc(doc(db, 'usuarios', userCredential.user.uid));
+      const firebaseUid = userCredential.user.uid;
 
-      userDoc.exists()
-        ? userDoc.data().rol === 'admin'
-          ? navigate('/admin')
-          : navigate('/panel')
-        : setError('El perfil no está configurado correctamente.');
-    } catch {
-      setError('Credenciales de acceso incorrectas.');
+      // 3. BÚSQUEDA DEL PERFIL POR CAMPO 'uid' (Solución al ID mismatch)
+      const qPerfil = query(
+        collection(db, 'usuarios'), 
+        where('uid', '==', firebaseUid)
+      );
+      const querySnap = await getDocs(qPerfil);
+
+      if (!querySnap.empty) {
+        const finalUserData = querySnap.docs[0].data();
+        
+        // Redirección basada en el rol encontrado en el documento
+        if (finalUserData.rol === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/panel');
+        }
+      } else {
+        // Si el usuario existe en Auth pero no hay documento con ese campo UID
+        await signOut(auth);
+        throw new Error('Su perfil no está configurado correctamente en la base de datos.');
+      }
+
+    } catch (err) {
+      console.error("Error en login:", err);
+      // Traducción de errores comunes de Firebase
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setError('Correo o contraseña incorrectos.');
+      } else {
+        setError(err.message || 'Error al intentar ingresar.');
+      }
     } finally {
       setLoading(false);
     }
@@ -60,8 +89,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex bg-white font-sans">
-      
-      {/* SECCIÓN IZQUIERDA: IMAGEN (35%) */}
+      {/* SECCIÓN IZQUIERDA: IMAGEN */}
       <div className="hidden lg:flex w-[35%] bg-slate-900 relative overflow-hidden">
         <div className="absolute inset-0">
           <img
@@ -71,7 +99,6 @@ const Login = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-blue-900/40 to-slate-900" />
         </div>
-        
         <div className="relative z-10 self-end p-12 w-full">
           <div className="h-1.5 w-16 bg-blue-600 mb-6" />
           <p className="text-white text-xl font-medium leading-relaxed opacity-90">
@@ -83,13 +110,12 @@ const Login = () => {
       {/* SECCIÓN DERECHA: FORMULARIO */}
       <div className="w-full lg:w-[65%] flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-[420px] flex flex-col">
-          
           <div className="mb-8">
             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
               Acceso al <span className="text-orange-500">Portal</span>
             </h1>
             <p className="text-slate-500 text-base leading-relaxed">
-              Ingrese sus credenciales de administración para acceder al panel de control.
+              Ingrese sus credenciales para acceder al panel de control.
             </p>
           </div>
 
@@ -106,7 +132,7 @@ const Login = () => {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
                 <input
                   type="text"
-                  placeholder="correo electrónico"
+                  placeholder="Unidad o correo electrónico"
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 focus:bg-white transition-all outline-none text-slate-900 font-semibold text-sm"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -118,9 +144,9 @@ const Login = () => {
             <div className="space-y-1.5">
               <div className="flex justify-between items-center px-1">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Contraseña</label>
-                <button type="button" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                <Link to="/forgot-password" size={18} className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">
                   Recuperar acceso
-                </button>
+                </Link>
               </div>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
@@ -142,7 +168,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* AGG: CHECKBOX DE TÉRMINOS Y TRATAMIENTO DE DATOS */}
             <div className="flex items-start gap-3 px-1 py-2">
               <div className="flex items-center h-5">
                 <input
@@ -162,8 +187,8 @@ const Login = () => {
               type="submit"
               disabled={loading}
               className={`w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl mt-4
-                ${acceptedTerms 
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 active:scale-[0.98]' 
+                ${acceptedTerms
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 active:scale-[0.98]'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
             >
               {loading ? (
@@ -183,7 +208,6 @@ const Login = () => {
           </footer>
         </div>
       </div>
-
     </div>
   );
 };

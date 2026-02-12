@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Menu, X, Building2, User, LogOut, LayoutGrid, Home
-} from 'lucide-react';
+} from 'lucide-react'; // CORREGIDO AQUÍ
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
 import { auth } from '../api/firebaseConfig';
@@ -16,6 +16,11 @@ const Navbar = () => {
   const isDashboard =
     location.pathname.includes('/admin') ||
     location.pathname.includes('/panel');
+
+  // Si es dashboard, no devuelve nada para que no se encime con el Sidebar
+  if (isDashboard) {
+    return null;
+  }
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -54,21 +59,21 @@ const Navbar = () => {
             {!user ? (
             
             <Link to="/login">
-  <button
-    className="
-      bg-blue-600 hover:bg-blue-700
-      text-white px-6 py-3
-      rounded-xl font-black text-xs
-      uppercase tracking-widest
-      flex items-center gap-2
-      transition-all
-      shadow-lg shadow-blue-600/25
-    "
-  >
-    <User size={18} />
-    Acceso Residentes
-  </button>
-</Link>
+              <button
+                className="
+                  bg-blue-600 hover:bg-blue-700
+                  text-white px-6 py-3
+                  rounded-xl font-black text-xs
+                  uppercase tracking-widest
+                  flex items-center gap-2
+                  transition-all
+                  shadow-lg shadow-blue-600/25
+                "
+              >
+                <User size={18} />
+                Acceso Residentes
+              </button>
+            </Link>
 
             ) : (
               <div className="flex items-center gap-3">

@@ -1,25 +1,49 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/authContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import DashboardResidente from './pages/DashboardResidentes';
 import DashboardAdmin from './pages/DashboardAdmin';
 
-// Componente para manejar la raíz "/" sin parpadeos
+// Wrapper para inyectar el usuario del contexto al Dashboard de Residente
+const DashboardWrapper = () => {
+  const { user } = useAuth();
+  return <DashboardResidente user={user} />;
+};
+
+// Wrapper para inyectar el usuario al Dashboard de Admin (opcional si lo necesitas)
+const AdminWrapper = () => {
+  const { user } = useAuth();
+  return <DashboardAdmin user={user} />;
+};
+
+const NavbarWrapper = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+
+  // Solo mostramos la Navbar pública si NO hay usuario
+  if (!user) {
+    return <Navbar />;
+  }
+
+  return null;
+};
+
 const RootHandler = () => {
   const { user, loading } = useAuth();
 
-  // 1. MIENTRAS CARGA: No mostramos nada para evitar el "flash" del Home
-  if (loading) return null; 
+  if (loading) return null;
 
-  // 2. SI HAY USUARIO: Vamos directo al panel (según su rol)
   if (user) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/panel'} replace />;
+    // Redirección basada en 'rol' (campo exacto en tu Firestore)
+    // Cambiado de user.role a user.rol para coincidir con la DB
+    return <Navigate to={user.rol === 'admin' ? '/admin' : '/panel'} replace />;
   }
 
-  // 3. SI NO HAY USUARIO: Recién aquí mostramos el Home
   return <Home />;
 };
 
@@ -27,26 +51,37 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Navbar />
+        <NavbarWrapper />
+
         <Routes>
-          {/* La raíz ahora es controlada por el RootHandler */}
+          {/* Ruta Raíz */}
           <Route path="/" element={<RootHandler />} />
-          
+
+          {/* Rutas Públicas */}
           <Route path="/login" element={<Login />} />
-          
-          <Route path="/panel" element={
-            <ProtectedRoute allowedRoles={['residente']}>
-              <DashboardResidente />
-            </ProtectedRoute>
-          } />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          <Route path="/admin" element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <DashboardAdmin /> 
-            </ProtectedRoute>
-          } />
+          {/* Rutas Privadas: Panel de Residente */}
+          <Route
+            path="/panel"
+            element={
+              <ProtectedRoute allowedRoles={['residente']}>
+                <DashboardWrapper />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Redirección de seguridad para rutas inexistentes */}
+          {/* Rutas Privadas: Panel de Administrador */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminWrapper />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirección por defecto */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
